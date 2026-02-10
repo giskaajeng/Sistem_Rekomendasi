@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .bg { fill: #20B2AA; }
+      .icon { fill: #fff; }
+    </style>
+  </defs>
+  <circle cx="50" cy="50" r="48" class="bg" stroke="#333" stroke-width="2"/>
+  <rect x="28" y="32" width="44" height="36" class="icon" stroke="#333" stroke-width="2" rx="2"/>
+  <circle cx="40" cy="42" r="6" class="bg" stroke="#333" stroke-width="1"/>
+  <path d="M 52 48 Q 55 45 60 48" class="bg" stroke="#333" stroke-width="1.5" fill="none"/>
+  <path d="M 50 58 L 70 58" stroke="#333" stroke-width="1.5"/>
+  <path d="M 50 65 L 70 65" stroke="#333" stroke-width="1.5"/>
+</svg>

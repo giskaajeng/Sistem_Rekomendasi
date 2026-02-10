@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .bg { fill: #FFD700; }
+      .icon { fill: #fff; }
+    </style>
+  </defs>
+  <circle cx="50" cy="50" r="48" class="bg" stroke="#333" stroke-width="2"/>
+  <circle cx="40" cy="35" r="8" class="icon"/>
+  <circle cx="60" cy="35" r="8" class="icon"/>
+  <path d="M 35 50 Q 50 60 65 50" class="icon" stroke="#333" stroke-width="2" fill="none"/>
+  <path d="M 40 65 L 40 75" stroke="#333" stroke-width="2"/>
+  <path d="M 60 65 L 60 75" stroke="#333" stroke-width="2"/>
+</svg>

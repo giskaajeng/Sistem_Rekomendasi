@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .bg { fill: #FF69B4; }
+      .icon { fill: #fff; }
+    </style>
+  </defs>
+  <circle cx="50" cy="50" r="48" class="bg" stroke="#333" stroke-width="2"/>
+  <circle cx="50" cy="28" r="9" class="icon"/>
+  <ellipse cx="50" cy="50" rx="10" ry="13" class="icon"/>
+  <path d="M 38 58 Q 50 65 62 58" class="icon" stroke="#333" stroke-width="2" fill="none"/>
+  <path d="M 40 65 L 38 75" stroke="#333" stroke-width="2"/>
+  <path d="M 60 65 L 62 75" stroke="#333" stroke-width="2"/>
+  <circle cx="50" cy="42" r="4" class="bg" stroke="#333" stroke-width="1"/>
+</svg>
