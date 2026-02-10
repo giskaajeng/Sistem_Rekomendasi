@@ -179,21 +179,27 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             margin-left: 280px;
             flex: 1;
             padding: 40px;
+            padding-top: 20px;
         }
 
         .page-header {
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            margin-top: 0;
+            padding-top: 20px;
+            padding-bottom: 20px;
         }
 
         .page-header h1 {
             font-size: 36px;
             color: #1a3a5c;
-            margin-bottom: 7px;
+            margin-bottom: 8px;
+            margin-top: 0;
         }
 
         .page-header p {
             color: #707879;
             font-size: 16px;
+            margin: 0;
         }
 
         /* Cards Grid */
@@ -201,7 +207,8 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
-            margin-bottom: 43px;
+            margin-bottom: 40px;
+            margin-top: 0;
         }
 
         .card {
@@ -218,6 +225,7 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            margin: 0;
         }
 
         .card:nth-child(1) { animation-delay: 0.05s; }
@@ -244,7 +252,8 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
 
         .card-icon {
             font-size: 48px;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            margin-top: 0;
         }
 
         .card-number {
@@ -252,6 +261,7 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             font-weight: bold;
             color: #1a3a5c;
             margin-bottom: 8px;
+            margin-top: 0;
             line-height: 1.2;
         }
 
@@ -261,11 +271,12 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            margin: 0;
         }
 
         /* Informasi Sistem Section */
         .info-section {
-            margin-top: 50px;
+            margin-top: 40px;
             margin-bottom: 40px;
         }
 
@@ -273,6 +284,7 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             font-size: 24px;
             color: #1a3a5c;
             margin-bottom: 20px;
+            margin-top: 0;
             font-weight: 600;
         }
 
@@ -290,6 +302,9 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             animation: fadeInUp 0.5s ease backwards;
+            margin: 0;
+            text-decoration: none;
+            color: inherit;
         }
 
         .info-card:nth-child(1) { animation-delay: 0.7s; }
@@ -304,6 +319,7 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
         .info-card-icon {
             font-size: 48px;
             margin-bottom: 20px;
+            margin-top: 0;
         }
 
         .info-card-title {
@@ -311,12 +327,14 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             font-weight: 600;
             color: #1a3a5c;
             margin-bottom: 12px;
+            margin-top: 0;
         }
 
         .info-card-desc {
             color: #7f8c8d;
             font-size: 13px;
             line-height: 1.6;
+            margin: 0;
         }
 
         /* Animations */
@@ -457,16 +475,24 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             .main-content {
                 margin-left: 80px;
                 padding: 30px 20px;
+                padding-top: 20px;
+            }
+
+            .page-header {
+                margin-bottom: 25px;
+                margin-top: 0;
             }
 
             .cards-grid {
                 grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
                 gap: 15px;
+                margin-bottom: 30px;
             }
 
             .card {
                 padding: 20px 15px;
                 min-height: 150px;
+                margin: 0;
             }
 
             .card-number {
@@ -475,6 +501,11 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
 
             .card-label {
                 font-size: 14px;
+            }
+
+            .info-section {
+                margin-top: 30px;
+                margin-bottom: 30px;
             }
         }
 
@@ -508,16 +539,24 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             .main-content {
                 margin-left: 0;
                 padding: 70px 20px 20px;
+                padding-top: 70px;
+            }
+
+            .page-header {
+                margin-bottom: 25px;
+                margin-top: 0;
             }
 
             .cards-grid {
                 grid-template-columns: repeat(3, 1fr);
                 gap: 12px;
+                margin-bottom: 30px;
             }
 
             .card {
                 padding: 18px 12px;
                 min-height: 160px;
+                margin: 0;
             }
 
             .card-icon {
@@ -548,18 +587,29 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             .info-cards-grid {
                 grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             }
+
+            .info-section {
+                margin-top: 30px;
+                margin-bottom: 30px;
+            }
+
+            .info-section h2 {
+                margin-bottom: 18px;
+            }
         }
 
         @media (max-width: 600px) {
             .cards-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 10px;
+                margin-bottom: 25px;
             }
 
             .card {
                 padding: 16px 10px;
                 min-height: 140px;
                 border-top: 3px solid #ff9f43;
+                margin: 0;
             }
 
             .card-icon {
@@ -578,6 +628,12 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
 
             .main-content {
                 padding: 15px;
+                padding-top: 70px;
+            }
+
+            .page-header {
+                margin-bottom: 20px;
+                margin-top: 0;
             }
 
             .page-header h1 {
@@ -608,6 +664,16 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
 
             .info-card-desc {
                 font-size: 12px;
+            }
+
+            .info-section {
+                margin-top: 25px;
+                margin-bottom: 25px;
+            }
+
+            .info-section h2 {
+                font-size: 18px;
+                margin-bottom: 15px;
             }
         }
 
