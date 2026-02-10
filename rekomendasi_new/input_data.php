@@ -1341,7 +1341,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     <input type="text" class="form-control" name="nama_kecamatan" placeholder="Masukkan nama kecamatan" value="<?php echo htmlspecialchars($_POST['nama_kecamatan'] ?? ''); ?>" required>
                                 </div>
 
-
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        Nama Desa 
+                                    </label>
+                                    <input type="text" class="form-control" name="nama_desa" placeholder="Masukkan nama desa" value="<?php echo htmlspecialchars($_POST['nama_desa'] ?? ''); ?>" required>
+                                </div>
                             </div>
 
 
