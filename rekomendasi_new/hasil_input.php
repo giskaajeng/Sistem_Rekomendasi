@@ -1,6 +1,28 @@
 <?php
 require_once 'config.php';
 
+// Cek pesan dari URL parameter
+$msg = isset($_GET['msg']) ? htmlspecialchars($_GET['msg']) : '';
+$data_type = isset($_GET['type']) ? htmlspecialchars($_GET['type']) : 'sekolah';
+$new_data_id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+$notification_type = '';
+$notification_message = '';
+
+if ($msg === 'added') {
+    $notification_type = 'success';
+    if ($data_type === 'kantor') {
+        $notification_message = '✓ Data Kantor Desa berhasil ditambahkan ke database!';
+    } else {
+        $notification_message = '✓ Data Sekolah berhasil ditambahkan ke database!';
+    }
+} elseif ($msg === 'deleted') {
+    $notification_type = 'success';
+    $notification_message = '✓ Data berhasil dihapus!';
+} elseif ($msg === 'updated') {
+    $notification_type = 'success';
+    $notification_message = '✓ Data berhasil diperbarui!';
+}
+
 // Helper: cek apakah tabel ada di database
 if (!function_exists('table_exists')) {
     function table_exists($table) {
@@ -1037,6 +1059,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
         }
 
+        /* Alert/Notification Styles */
+        .alert-notification {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            animation: slideInDown 0.5s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .alert-notification.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-notification.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-notification.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+        }
+
+        .alert-message {
+            flex: 1;
+        }
+
+        .alert-close {
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .alert-close:hover {
+            opacity: 0.8;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .stats-grid {
@@ -1719,6 +1796,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             border: 1px solid #f5c6cb;
         }
 
+        /* Alert Notification */
+        .alert-notification {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            animation: slideDown 0.4s ease;
+            border-left: 5px solid transparent;
+        }
+
+        .alert-notification.success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left-color: #28a745;
+        }
+
+        .alert-notification.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left-color: #dc3545;
+        }
+
+        .alert-icon {
+            font-size: 20px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .alert-message {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .alert-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: inherit;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+        .alert-close:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+
         @keyframes slideDown {
             from {
                 transform: translateY(-20px);
@@ -2033,6 +2165,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 <h1>Hasil Input Data</h1>
                 <p>Kelola data sekolah yang telah diinput</p>
             </div>
+
+            <?php if ($notification_type): ?>
+            <div class="alert-notification <?php echo htmlspecialchars($notification_type); ?>" id="notificationAlert">
+                <span class="alert-icon">
+                    <?php if ($notification_type === 'success'): ?>
+                        ✓
+                    <?php elseif ($notification_type === 'error'): ?>
+                        ✕
+                    <?php else: ?>
+                        ℹ
+                    <?php endif; ?>
+                </span>
+                <span class="alert-message"><?php echo htmlspecialchars($notification_message); ?></span>
+                <button class="alert-close" onclick="document.getElementById('notificationAlert').style.display='none';">×</button>
+            </div>
+            <?php endif; ?>
 
             <div class="data-section">
                 <div class="section-title">
@@ -2955,6 +3103,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 if (adminStatusTop) adminStatusTop.classList.remove('hidden-on-scroll');
             }
             lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+        });
+
+        // Auto-hide notification after 5 seconds
+        window.addEventListener('load', function() {
+            const notificationAlert = document.getElementById('notificationAlert');
+            if (notificationAlert) {
+                setTimeout(function() {
+                    notificationAlert.style.transition = 'opacity 0.5s ease';
+                    notificationAlert.style.opacity = '0';
+                    setTimeout(function() {
+                        notificationAlert.style.display = 'none';
+                    }, 500);
+                    // Clean up URL parameter
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }, 5000);
+            }
+
+            // Auto-scroll ke data terbaru setelah data ditambahkan
+            const urlParams = new URLSearchParams(window.location.search);
+            const msg = urlParams.get('msg');
+            const dataType = urlParams.get('type');
+            const newId = urlParams.get('id');
+
+            if (msg === 'added') {
+                setTimeout(function() {
+                    if (dataType === 'sekolah') {
+                        // Scroll ke section data sekolah
+                        const sekolahSection = document.querySelector('.data-section:nth-of-type(2)');
+                        if (sekolahSection) {
+                            sekolahSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    } else if (dataType === 'kantor') {
+                        // Scroll ke section data kantor desa
+                        const kantoSection = document.querySelector('.data-section:nth-of-type(3)');
+                        if (kantoSection) {
+                            kantoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }
+                }, 800);
+            }
         });
     </script>
 </body>

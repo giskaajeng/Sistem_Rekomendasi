@@ -2,7 +2,7 @@
 require_once 'config.php';
 
 // Load kecamatan for selects (unique names only to avoid duplicates)
-$kecamatans = fetch_all("SELECT MIN(id_kecamatan) as id_kecamatan, TRIM(nama_kecamatan) as nama_kecamatan FROM kecamatan WHERE COALESCE(TRIM(nama_kecamatan),'') <> '' GROUP BY TRIM(nama_kecamatan) ORDER BY nama_kecamatan");
+$kecamatans = fetch_all("SELECT MIN(id_kecamatan) as id_kecamatan, TRIM(nama_kecamatan) as nama_kecamatan FROM kecamatan WHERE COALESCE(TRIM(nama_kecamatan), '') != '' GROUP BY TRIM(nama_kecamatan) ORDER BY nama_kecamatan");
 
 $error = '';
 $success = '';
@@ -39,8 +39,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                 $sql_ins_kd = "INSERT INTO kantor_desa (" . implode(',', $cols) . ") VALUES (" . implode(',', $vals) . ")";
                 if (query($sql_ins_kd)) {
-                    // redirect to hasil page for kantor desa
-                    header('Location: hasil_kantor.php?msg=added'); exit;
+                    // Get the inserted ID for highlighting
+                    $inserted_id = mysqli_insert_id($conn);
+                    // Set success flag and ID to show in JavaScript
+                    $success_kantor = 'Data Kantor Desa berhasil ditambahkan!';
+                    // Set data in session or return via JS
+                    echo '<script>
+                        sessionStorage.setItem("successAdded", "kantor");
+                        sessionStorage.setItem("addedId", "' . $inserted_id . '");
+                    </script>';
                 } else {
                     $error_kantor = 'Gagal menyimpan Kantor Desa (cek struktur tabel).';
                 }
@@ -126,22 +133,94 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $Longtitude_f = (float)$Longtitude;
             $npsn_i = (int)$npsn;
 
-            // Build sekolah insert dynamically (include id_desa if sekolah has that column)
-            $sk_cols = ['id_kecamatan', 'nama_desa', 'alamat', 'latitude', 'Longtitude', 'nama_sekolah', 'tingkat_pendidikan', 'npsn', 'status'];
-            $sk_vals = [$id_kecamatan, "'$nama_desa'", "'$alamat'", $latitude_f, $Longtitude_f, "'$nama_sekolah'", "'$tingkat_pendidikan'", $npsn_i, "'$status'"];
-            $sk_table_cols = array_column(fetch_all("SHOW COLUMNS FROM sekolah"), 'Field');
-            if (in_array('id_desa', $sk_table_cols) && isset($id_desa) && $id_desa) {
-                // insert id_desa after id_kecamatan
-                array_splice($sk_cols, 1, 0, 'id_desa');
-                array_splice($sk_vals, 1, 0, $id_desa);
-            }
-            $insert_query = "INSERT INTO sekolah (" . implode(',', $sk_cols) . ") VALUES (" . implode(',', $sk_vals) . ")";
+            // Get actual sekolah table columns (rows include Field, Type, Null, Key, Default, Extra)
+            $sk_table_rows = fetch_all("SHOW COLUMNS FROM sekolah");
+            $sk_table_cols = array_column($sk_table_rows, 'Field');
+            $sk_table_map = [];
+            foreach ($sk_table_rows as $r) { $sk_table_map[$r['Field']] = $r; }
 
-            if (mysqli_query($conn, $insert_query)) {
-                // redirect to hasil page for sekolah
-                header('Location: hasil_sekolah.php?msg=added'); exit;
+            // Helper to find a column case-insensitively
+            $find_col = function($cols, $candidates) {
+                $cands = array_map('strtolower', $candidates);
+                foreach ($cols as $c) {
+                    if (in_array(strtolower($c), $cands)) return $c;
+                }
+                return null;
+            };
+
+            // Map desired fields to actual columns (if present)
+            $desired = [
+                'id_kecamatan' => $id_kecamatan,
+                'id_desa' => $id_desa ?? null,
+                'nama_desa' => $nama_desa,
+                'alamat' => $alamat,
+                'latitude' => $latitude_f,
+                'Longtitude' => $Longtitude_f,
+                'nama_sekolah' => $nama_sekolah,
+                'tingkat_pendidikan' => $tingkat_pendidikan,
+                'npsn' => $npsn_i,
+                'status' => $status,
+            ];
+
+            $sk_cols = [];
+            $sk_vals = [];
+            foreach ($desired as $col => $val) {
+                $real = $find_col($sk_table_cols, [$col]);
+                if ($real === null) continue; // skip fields not in table
+
+                // if the target column is PRIMARY or UNIQUE or AUTO_INCREMENT, skip inserting into it
+                $colRow = $sk_table_map[$real] ?? null;
+                if ($colRow) {
+                    $key = $colRow['Key'] ?? '';
+                    $extra = $colRow['Extra'] ?? '';
+                    if (in_array($key, ['PRI', 'UNI']) || stripos($extra, 'auto_increment') !== false) {
+                        continue;
+                    }
+                }
+
+                $sk_cols[] = $real;
+                // numeric types should not be quoted
+                if (is_int($val) || is_float($val)) {
+                    $sk_vals[] = $val;
+                } else {
+                    $sk_vals[] = "'" . escape($val) . "'";
+                }
+            }
+
+            // Build existence check using actual column names (fallback to defaults)
+            $nameCol = $find_col($sk_table_cols, ['nama_sekolah', 'nama_sekolah']);
+            $kecCol  = $find_col($sk_table_cols, ['id_kecamatan', 'id_kec', 'kecamatan_id']);
+            if (!$nameCol) $nameCol = 'nama_sekolah';
+            if (!$kecCol) $kecCol = 'id_kecamatan';
+
+            $existing_check = query("SELECT id_sekolah FROM sekolah WHERE $nameCol = '" . escape($nama_sekolah) . "' AND $kecCol = $id_kecamatan");
+            if ($existing_check && mysqli_num_rows($existing_check) > 0) {
+                $error = 'Sekolah dengan nama "' . htmlspecialchars($nama_sekolah) . '" sudah terdaftar di kecamatan ini.';
             } else {
-                $error = 'Error: ' . mysqli_error($conn);
+                if (empty($sk_cols) || empty($sk_vals)) {
+                    $error = 'Struktur tabel `sekolah` tidak sesuai atau kolom wajib tidak ditemukan.';
+                } else {
+                    $insert_query = "INSERT INTO sekolah (" . implode(',', $sk_cols) . ") VALUES (" . implode(',', $sk_vals) . ")";
+
+                    if (query($insert_query)) {
+                        // Get the inserted ID for highlighting
+                        $inserted_id = mysqli_insert_id($conn);
+                        // Set success flag and ID to show in JavaScript
+                        $success = 'Data sekolah berhasil ditambahkan!';
+                        // Put indicator in sessionStorage so frontend can show modal and offer to view results
+                        echo '<script>' . "\n" .
+                            'sessionStorage.setItem("successAdded", "sekolah");' . "\n" .
+                            'sessionStorage.setItem("addedId", "' . $inserted_id . '");' . "\n" .
+                            '</script>';
+                    } else {
+                        $err_msg = mysqli_error($conn);
+                        if (strpos($err_msg, 'Duplicate entry') !== false) {
+                            $error = 'Terjadi error: Data sudah terdaftar di database. Silakan periksa kembali data yang Anda inputkan.';
+                        } else {
+                            $error = 'Error: ' . $err_msg;
+                        }
+                    }
+                }
             }
         }
     }
@@ -403,6 +482,119 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
             animation: slideUp 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Success Notification Modal */
+        .success-notification-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .success-notification-modal.show {
+            display: flex;
+        }
+
+        .success-notification-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUpSuccess 0.4s ease;
+            border-left: 5px solid #27ae60;
+            text-align: center;
+        }
+
+        .success-notification-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: scaleIn 0.5s ease;
+            display: inline-block;
+        }
+
+        .success-notification-title {
+            font-size: 24px;
+            color: #27ae60;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .success-notification-message {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .success-notification-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .success-btn {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .success-btn-primary {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .success-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .success-btn-secondary {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+            flex: 1;
+            border: 2px solid #3498db;
+        }
+
+        .success-btn-secondary:hover {
+            background: rgba(52, 152, 219, 0.2);
+            transform: translateY(-2px);
+        }
+
+        @keyframes slideUpSuccess {
+            from {
+                transform: translateY(30px) scale(0.95);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
         }
 
         .notification-title::before {
@@ -1251,6 +1443,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
                                 <div class="form-group">
                                     <label class="form-label">
+                                        Nama Kecamatan <span style="color: red;">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" name="nama_kecamatan" placeholder="Masukkan nama kecamatan" value="<?php echo htmlspecialchars($_POST['nama_kecamatan'] ?? ''); ?>" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">
+                                        Nama Desa <span style="color: red;">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" name="nama_desa" placeholder="Masukkan nama desa" value="<?php echo htmlspecialchars($_POST['nama_desa'] ?? ''); ?>" required>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+    
+                                <div class="form-group">
+                                    <label class="form-label">
                                         Tingkat Pendidikan 
                                     </label>
                                     <input type="text" class="form-control" name="tingkat_pendidikan" placeholder="Masukkan tingkat pendidikan (SD/SMP/SMA)" value="<?php echo htmlspecialchars($_POST['tingkat_pendidikan'] ?? ''); ?>" required>
@@ -1378,6 +1587,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         </main>
     </div>
 
+    <!-- Success Notification Modal -->
+    <div id="successModal" class="success-notification-modal">
+        <div class="success-notification-content">
+            <div class="success-notification-icon">✓</div>
+            <div class="success-notification-title">Berhasil!</div>
+            <div class="success-notification-message" id="successMessage">
+                Data baru telah berhasil ditambahkan ke sistem
+            </div>
+            <div class="success-notification-buttons">
+                <button class="success-btn success-btn-secondary" onclick="closeSuccessAndStay()">Tambah Data Lainnya</button>
+                <button class="success-btn success-btn-primary" onclick="closeSuccessAndGo()">Lihat Hasil</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Notifikasi Logout Modal -->
     <div id="notificationModal" class="notification-modal">
         <div class="notification-modal-content">
@@ -1396,7 +1620,62 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 const sidebar = document.querySelector('.sidebar');
                 sidebar.classList.add('hidden');
             }
+
+            // Check if data was just successfully added
+            checkSuccessNotification();
         });
+
+        // Check and show success notification
+        function checkSuccessNotification() {
+            const successAdded = sessionStorage.getItem('successAdded');
+            const addedId = sessionStorage.getItem('addedId');
+            
+            if (successAdded) {
+                let message = 'Data baru telah berhasil ditambahkan ke sistem';
+                if (successAdded === 'sekolah') {
+                    message = 'Data Sekolah baru berhasil ditambahkan! ✨';
+                } else if (successAdded === 'kantor') {
+                    message = 'Data Kantor Desa baru berhasil ditambahkan! ✨';
+                }
+                
+                // Clear the session storage
+                sessionStorage.removeItem('successAdded');
+                sessionStorage.removeItem('addedId');
+                
+                // Show success modal
+                showSuccessNotification(message);
+                
+                // Clear form
+                const forms = document.querySelectorAll('form');
+                forms.forEach(form => form.reset());
+            }
+        }
+
+        // Show success notification modal
+        function showSuccessNotification(message) {
+            const modal = document.getElementById('successModal');
+            const msgElement = document.getElementById('successMessage');
+            msgElement.textContent = message;
+            modal.classList.add('show');
+        }
+
+        // Close success modal and stay on page to add more data
+        function closeSuccessAndStay() {
+            const modal = document.getElementById('successModal');
+            modal.classList.remove('show');
+        }
+
+        // Close success modal and redirect to hasil page
+        function closeSuccessAndGo() {
+            window.location.href = 'hasil_input.php';
+        }
+
+        // Form submit handler with validation
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            form.submit();
+        }
 
         // Mobile Menu Toggle
         function toggleMobileMenu() {
@@ -1472,6 +1751,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             notifModal.addEventListener('click', function(event) {
                 if (event.target === notifModal) {
                     cancelLogout();
+                }
+            });
+        }
+
+        // Close success modal when clicking outside
+        const successModal = document.getElementById('successModal');
+        if (successModal) {
+            successModal.addEventListener('click', function(event) {
+                if (event.target === successModal) {
+                    closeSuccessAndStay();
                 }
             });
         }
