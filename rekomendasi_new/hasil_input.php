@@ -120,6 +120,15 @@ if ($per_page === 0) {
 // Prepare ordered query
 $order_query = $query . " ORDER BY s.id_sekolah DESC";
 
+// AJAX search API: return JSON when `?ajax=1` is provided (used by client-side search)
+if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    // Return all matching rows (no pagination) so client can render immediately
+    $ajax_rows = fetch_all($order_query);
+    echo json_encode($ajax_rows);
+    exit;
+}
+
 // Jika diminta export (csv atau excel), kembalikan seluruh data yang sesuai (abaikan limit)
 if (isset($_GET['export']) && in_array($_GET['export'], ['csv','excel'])) {
     $export_rows = fetch_all($order_query);
@@ -2338,7 +2347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
                 <!-- Search Bar -->
                 <div class="search-container">
-                    <form method="GET" style="width: 100%; display:flex; gap:10px; align-items:center;">
+                    <form id="sekolahSearchForm" method="GET" style="width: 100%; display:flex; gap:10px; align-items:center;">
                         <div class="search-bar" style="flex:1; display:flex; gap:8px; align-items:center;">
                             <span class="search-icon">🔍</span>
                             <input type="text" name="search" placeholder="Cari berdasarkan nama kecamatan, desa, atau sekolah..." value="<?php echo htmlspecialchars($search); ?>">
@@ -2382,7 +2391,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                                     <th class="col-aksi">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="sekolahTableBody">
                                 <?php 
                                 $no = $offset + 1;
                                 while ($row = mysqli_fetch_assoc($result)): ?>
@@ -2714,6 +2723,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 const sidebar = document.querySelector('.sidebar');
                 sidebar.classList.add('hidden');
             }
+        });
+
+        // Client-side AJAX search for Sekolah: prevent full page reload and render results inline
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('sekolahSearchForm');
+            const tbody = document.getElementById('sekolahTableBody');
+            const pagination = document.querySelector('.pagination');
+            if (!form || !tbody) return;
+
+            function escapeHTML(s) {
+                return String(s === null || s === undefined ? '' : s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const q = (form.querySelector('input[name="search"]') || { value: '' }).value.trim();
+                const url = 'hasil_input.php?ajax=1&search=' + encodeURIComponent(q);
+
+                // show loading state
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;">Mencari...</td></tr>';
+                if (pagination) pagination.style.display = 'none';
+
+                fetch(url, { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(rows => {
+                        if (!rows || rows.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;">Tidak ditemukan data sekolah.</td></tr>';
+                            return;
+                        }
+
+                        let html = '';
+                        rows.forEach((r, idx) => {
+                            const tingkat = escapeHTML(r.tingkat_pendidikan ?? '');
+                            const nama = escapeHTML(r.nama_sekolah ?? '');
+                            const npsn = escapeHTML(r.npsn ?? '');
+                            const status = escapeHTML(r.status ?? '');
+                            const alamat = escapeHTML(r.alamat ?? '');
+
+                            // determine latitude/longitude from multiple possible keys
+                            let lat = '';
+                            let lon = '';
+                            ['latitude','lat','lintang','kec_latitude'].some(k => { if (r[k] !== undefined && r[k] !== null && r[k] !== '') { lat = r[k]; return true; } });
+                            ['longtitude','longtude','lon','bujur','kec_longtitude'].some(k => { if (r[k] !== undefined && r[k] !== null && r[k] !== '') { lon = r[k]; return true; } });
+
+                            const latFmt = (lat !== '' && !isNaN(lat)) ? Number(lat).toFixed(6) : '';
+                            const lonFmt = (lon !== '' && !isNaN(lon)) ? Number(lon).toFixed(6) : '';
+
+                            html += '<tr>';
+                            html += '<td>' + (idx + 1) + '</td>';
+                            html += '<td>' + tingkat + '</td>';
+                            html += '<td>' + nama + '</td>';
+                            html += '<td>' + npsn + '</td>';
+                            html += '<td>' + status + '</td>';
+                            html += '<td>' + alamat + '</td>';
+                            html += '<td>' + latFmt + '</td>';
+                            html += '<td>' + lonFmt + '</td>';
+                            html += '<td><div class="action-btns">' +
+                                    '<button class="btn-icon btn-edit" onclick="editData(' + (r.id_sekolah) + ')" title="Edit"><img src="assets/icons/edit.png" alt="Edit"></button>' +
+                                    '<button class="btn-icon btn-delete" onclick="deleteData(' + (r.id_sekolah) + ')" title="Hapus"><img src="assets/icons/delete.png" alt="Hapus"></button>' +
+                                '</div></td>';
+                            html += '</tr>';
+                        });
+
+                        tbody.innerHTML = html;
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;">Terjadi kesalahan saat mencari.</td></tr>';
+                    });
+            });
         });
 
         let currentDeleteId = null;

@@ -49,7 +49,8 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             top: 0;
             height: 100vh;
             overflow-y: auto;
-            z-index: 9998;
+            /* ensure sidebar sits above other floating UI elements */
+            z-index: 11050;
             transition: transform 0.3s ease;
             transform: translateX(0);
         }
@@ -68,14 +69,18 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.3);
-            z-index: 9997;
+            /* backdrop sits below sidebar so it doesn't block sidebar clicks
+               when present; only captures pointer events when visible */
+            z-index: 11000;
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none;
         }
 
         .sidebar-backdrop.show {
             display: block;
             opacity: 1;
+            pointer-events: auto;
         }
 
         /* .sidebar-header {
@@ -459,11 +464,12 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             pointer-events: auto;
         }
 
-        /* If hidden-on-scroll is accidentally applied, keep desktop badge visible */
+        /* Hide desktop badge when `.hidden-on-scroll` is applied */
         .admin-status-top.desktop-admin.hidden-on-scroll {
-            transform: none !important;
-            opacity: 1 !important;
-            pointer-events: auto !important;
+            transform: translateY(-12px) !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
         /* Hide desktop badge on small screens (mobile uses .mobile-user-icon) */
@@ -1296,11 +1302,14 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
         <span></span>
     </button>
 
-    <!-- Desktop Admin Badge (fixed, placed at top-level so it doesn't follow scrolling containers) -->
-    <div class="admin-status-top desktop-admin" id="desktopAdminBadge" onclick="showLogoutNotification()">
+    <!-- Desktop Admin Badge (fixed, visual only; not interactive) -->
+    <div class="admin-status-top desktop-admin" id="desktopAdminBadge" aria-hidden="true">
         <div class="online-dot"></div>
         <span>Admin</span>
     </div>
+
+    <!-- Invisible bottom-right trigger: click here to show Admin badge when hidden -->
+    <div id="adminShowTrigger" title="Tampilkan Admin" style="position:fixed;right:16px;bottom:12px;width:56px;height:56px;z-index:10005;opacity:0;cursor:pointer;"></div>
 
     <!-- Mobile User Icon -->
     <div class="container">
@@ -1323,8 +1332,6 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
                     </a>
                 </li>
                 <li>
-
-
                 <li>
                     <a href="javascript:void(0)" class="dropdown-toggle" onclick="toggleDropdown(event)">
                         <span class="menu-icon">
@@ -1586,37 +1593,63 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
         // Scroll detection: hide/show only the mobile menu toggle (keep Admin visible)
         let lastScrollTop = 0;
         const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-<<<<<<< HEAD
         const mobileUserIcon = document.querySelector('.mobile-user-icon');
-=======
->>>>>>> c491135fc45e7c3c255a83d47caefb65e936011d
+        const adminBadge = document.getElementById('desktopAdminBadge');
+
+        // Helper: show/hide admin badge reliably
+        function showAdminBadge() {
+            if (!adminBadge) return;
+            adminBadge.classList.remove('hidden-on-scroll');
+            adminBadge.style.opacity = '1';
+            adminBadge.style.transform = 'translateY(0)';
+            adminBadge.style.pointerEvents = 'auto';
+        }
+
+        function hideAdminBadge() {
+            if (!adminBadge) return;
+            adminBadge.classList.add('hidden-on-scroll');
+            adminBadge.style.opacity = '0';
+            adminBadge.style.transform = 'translateY(-16px)';
+            adminBadge.style.pointerEvents = 'none';
+        }
 
         window.addEventListener('scroll', function() {
-            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-            
-<<<<<<< HEAD
-            // Always show when near top
-            if (currentScroll < 60) {
-                if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
-                if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
-            } else if (currentScroll < lastScrollTop) {
-                // Scrolling UP - hide buttons
-                if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
-                if (mobileUserIcon) mobileUserIcon.classList.add('hidden-on-scroll');
-            } else if (currentScroll > lastScrollTop) {
-                // Scrolling DOWN - show buttons
-                if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
-                if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
-=======
-            if (currentScroll > lastScrollTop && currentScroll > 60) {
-                // Scrolling DOWN - hide mobile menu toggle only
-                if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
-            } else if (currentScroll < lastScrollTop) {
-                // Scrolling UP - show mobile menu toggle only
-                if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
->>>>>>> c491135fc45e7c3c255a83d47caefb65e936011d
+            try {
+                const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+                const delta = currentScroll - lastScrollTop;
+                const threshold = 8; // ignore tiny scrolls
+
+                // Always show when near top
+                if (currentScroll < 60) {
+                    if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
+                    if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
+                    showAdminBadge();
+                    lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+                    return;
+                }
+
+                if (Math.abs(delta) <= threshold) {
+                    // small/noisy movement — ignore
+                    return;
+                }
+
+                if (delta < 0) {
+                    // Scrolling UP (toward top) — hide badge and mobile UI
+                    if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
+                    if (mobileUserIcon) mobileUserIcon.classList.add('hidden-on-scroll');
+                    hideAdminBadge();
+                } else {
+                    // Scrolling DOWN (toward bottom) — show badge and mobile UI
+                    if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
+                    if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
+                    showAdminBadge();
+                }
+
+                lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
+            } catch (err) {
+                // swallow errors silently in production
+                console.error('scroll handler error', err);
             }
-            lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
         });
 
         // User Logout Button Click
@@ -1643,6 +1676,59 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             }
         }
 
+        // Robust dropdown handler: attach to all .dropdown-toggle elements
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.dropdown-toggle').forEach(function(btn) {
+                // ensure accessibility
+                btn.setAttribute('role', 'button');
+                btn.setAttribute('tabindex', '0');
+
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('dropdown-toggle clicked', btn);
+                    const menu = btn.nextElementSibling && btn.nextElementSibling.classList.contains('submenu') ? btn.nextElementSibling : document.getElementById('rekomendasi-menu');
+                    const arrow = btn.querySelector('.dropdown-arrow');
+                    if (!menu) return;
+                    // toggle using class to avoid inline styles conflicts
+                    if (menu.classList.contains('show')) {
+                        menu.classList.remove('show');
+                        menu.style.display = 'none';
+                        if (arrow) { arrow.style.transform = 'rotate(0deg)'; }
+                        btn.classList.remove('active');
+                    } else {
+                        menu.classList.add('show');
+                        menu.style.display = 'block';
+                        if (arrow) { arrow.style.transform = 'rotate(90deg)'; }
+                        btn.classList.add('active');
+                    }
+                });
+
+                // keyboard support (Enter / Space)
+                btn.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        btn.click();
+                    }
+                });
+            });
+        });
+
+        // Bottom click trigger: show desktop admin badge when clicked
+        (function() {
+            const trigger = document.getElementById('adminShowTrigger');
+            if (!trigger) return;
+            trigger.addEventListener('click', function(e) {
+                const badge = document.getElementById('desktopAdminBadge');
+                if (badge) {
+                    badge.classList.remove('hidden-on-scroll');
+                    // briefly pulse to indicate visibility
+                    badge.style.transition = 'transform 0.15s ease';
+                    badge.style.transform = 'translateY(0)';
+                }
+            });
+        })();
+
         function showLogoutNotification() {
             const modal = document.getElementById('notificationModal');
             modal.classList.add('show');
@@ -1666,6 +1752,24 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
                     cancelLogout();
                 }
             });
+        }
+
+        // Debug helper: enable by adding ?debug_menu=1 to URL
+        if (location.search.indexOf('debug_menu=1') !== -1) {
+            console.log('Debug menu clicks enabled');
+            document.addEventListener('click', function(e) {
+                try {
+                    console.log('Captured click at', e.clientX, e.clientY, 'target:', e.target);
+                    const el = document.elementFromPoint(e.clientX, e.clientY);
+                    console.log('elementFromPoint:', el, 'pointer-events:', window.getComputedStyle(el).pointerEvents);
+                    // log up the chain
+                    let p = el; let depth = 0;
+                    while (p && depth < 6) {
+                        console.log('  parent', depth, p.tagName, p.className, 'style pointer-events=', window.getComputedStyle(p).pointerEvents);
+                        p = p.parentElement; depth++;
+                    }
+                } catch (err) { console.error(err); }
+            }, true); // capture phase
         }
     </script>
 </body>
