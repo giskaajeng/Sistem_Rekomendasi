@@ -416,13 +416,13 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             align-items: center;
             gap: 10px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 12px 20px;
+            padding: 10px 16px;
             border-radius: 25px;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             animation: slideInDown 0.5s ease;
             white-space: nowrap;
             flex-shrink: 0;
-            min-height: 44px;
+            min-height: 40px;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -440,6 +440,31 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             font-size: 13px;
             font-weight: 600;
             letter-spacing: 0.3px;
+        }
+
+        /* Make desktop admin badge fixed so it doesn't move on scroll
+           and adjust vertical position to align with the Dashboard heading */
+        .admin-status-top.desktop-admin {
+            position: fixed;
+            top: 40px; /* tweak this value if needed to align perfectly */
+            right: 40px;
+            z-index: 10006;
+            padding: 10px 14px;
+            transform: translateY(2px);
+            /* make sure it renders above other elements */
+            pointer-events: auto;
+        }
+
+        /* If hidden-on-scroll is accidentally applied, keep desktop badge visible */
+        .admin-status-top.desktop-admin.hidden-on-scroll {
+            transform: none !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        /* Hide desktop badge on small screens (mobile uses .mobile-user-icon) */
+        @media (max-width: 768px) {
+            .admin-status-top.desktop-admin { display: none; }
         }
 
 
@@ -1265,12 +1290,13 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
         <span></span>
     </button>
 
-    <!-- Mobile User Icon -->
-    <div class="mobile-user-icon" id="mobileUserIcon" onclick="showLogoutNotification()">
+    <!-- Desktop Admin Badge (fixed, placed at top-level so it doesn't follow scrolling containers) -->
+    <div class="admin-status-top desktop-admin" id="desktopAdminBadge" onclick="showLogoutNotification()">
         <div class="online-dot"></div>
-        <span>ADMIN</span>
+        <span>Admin</span>
     </div>
 
+    <!-- Mobile User Icon -->
     <div class="container">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
@@ -1346,6 +1372,8 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
                 <h1>Dashboard</h1>
                 <p>Jumlah Informasi Sekolah di Bangkalan</p>
             </div>
+
+            <!-- Desktop Admin Badge removed from here (rendered at top-level body) -->
 
             <div class="cards-grid">
                 <div class="card">
@@ -1549,22 +1577,19 @@ $ma = count_rows("SELECT COUNT(*) as total FROM sekolah WHERE UPPER(tingkat_pend
             menuToggle.addEventListener('click', toggleMobileMenu);
         }
 
-        // Scroll detection: hide/show mobile buttons
+        // Scroll detection: hide/show only the mobile menu toggle (keep Admin visible)
         let lastScrollTop = 0;
         const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-        const adminStatusTop = document.querySelector('.admin-status-top');
 
         window.addEventListener('scroll', function() {
             const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
             
             if (currentScroll > lastScrollTop && currentScroll > 60) {
-                // Scrolling DOWN - hide buttons
+                // Scrolling DOWN - hide mobile menu toggle only
                 if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
-                if (adminStatusTop) adminStatusTop.classList.add('hidden-on-scroll');
             } else if (currentScroll < lastScrollTop) {
-                // Scrolling UP - show buttons
+                // Scrolling UP - show mobile menu toggle only
                 if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
-                if (adminStatusTop) adminStatusTop.classList.remove('hidden-on-scroll');
             }
             lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
         });
