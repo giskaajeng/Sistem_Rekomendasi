@@ -1443,23 +1443,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
                                 <div class="form-group">
                                     <label class="form-label">
-                                        Nama Kecamatan <span style="color: red;">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="nama_kecamatan" placeholder="Masukkan nama kecamatan" value="<?php echo htmlspecialchars($_POST['nama_kecamatan'] ?? ''); ?>" required>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label">
-                                        Nama Desa <span style="color: red;">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" name="nama_desa" placeholder="Masukkan nama desa" value="<?php echo htmlspecialchars($_POST['nama_desa'] ?? ''); ?>" required>
-                                </div>
-                            </div>
-
-                            <div class="form-grid">
-    
-                                <div class="form-group">
-                                    <label class="form-label">
                                         Tingkat Pendidikan 
                                     </label>
                                     <input type="text" class="form-control" name="tingkat_pendidikan" placeholder="Masukkan tingkat pendidikan (SD/SMP/SMA)" value="<?php echo htmlspecialchars($_POST['tingkat_pendidikan'] ?? ''); ?>" required>
