@@ -559,7 +559,9 @@ $kantor_desa_json = json_encode($kantor_desa, JSON_UNESCAPED_UNICODE);
             }
 
             .admin-status-top {
-                display: none;
+                display: flex;
+                top: 70px;
+                right: 16px;
             }
 
             .map-wrapper {
@@ -962,6 +964,10 @@ $kantor_desa_json = json_encode($kantor_desa, JSON_UNESCAPED_UNICODE);
 
         /* Admin Status Top Right */
         .admin-status-top {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -1741,19 +1747,23 @@ $kantor_desa_json = json_encode($kantor_desa, JSON_UNESCAPED_UNICODE);
         // Scroll detection: hide/show mobile buttons
         let lastScrollTop = 0;
         const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-        const adminStatusTop = document.querySelector('.admin-status-top');
+        const mobileUserIcon = document.querySelector('.mobile-user-icon');
 
         window.addEventListener('scroll', function() {
             const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
             
-            if (currentScroll > lastScrollTop && currentScroll > 60) {
-                // Scrolling DOWN - hide buttons
-                if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
-                if (adminStatusTop) adminStatusTop.classList.add('hidden-on-scroll');
-            } else if (currentScroll < lastScrollTop) {
-                // Scrolling UP - show buttons
+            // Always show when near top
+            if (currentScroll < 60) {
+                if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
                 if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
-                if (adminStatusTop) adminStatusTop.classList.remove('hidden-on-scroll');
+            } else if (currentScroll < lastScrollTop) {
+                // Scrolling UP - hide buttons
+                if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
+                if (mobileUserIcon) mobileUserIcon.classList.add('hidden-on-scroll');
+            } else if (currentScroll > lastScrollTop) {
+                // Scrolling DOWN - show buttons
+                if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
+                if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
             }
             lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
         });

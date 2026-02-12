@@ -120,29 +120,31 @@ if ($per_page === 0) {
 // Prepare ordered query
 $order_query = $query . " ORDER BY s.id_sekolah DESC";
 
-// Jika diminta export CSV, kembalikan seluruh data yang sesuai (abaikan limit)
-if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+// Jika diminta export (csv atau excel), kembalikan seluruh data yang sesuai (abaikan limit)
+if (isset($_GET['export']) && in_array($_GET['export'], ['csv','excel'])) {
     $export_rows = fetch_all($order_query);
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename=sekolah_export.csv');
-    $out = fopen('php://output', 'w');
-    fputcsv($out, ['id_sekolah','id_kecamatan','nama_kecamatan','nama_desa','tingkat_pendidikan','nama_sekolah','npsn','status','alamat','latitude','longtitude']);
+    // Output sebagai Excel-readable HTML table (XLS)
+    header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+    header('Content-Disposition: attachment; filename=sekolah_export.xls');
+    // UTF-8 BOM
+    echo "\xEF\xBB\xBF";
+    echo "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /></head><body>";
+    echo "<table border=1><thead><tr style=\"background:#f0f0f0;\">";
+    $headers = ['id_sekolah','id_kecamatan','nama_kecamatan','nama_desa','tingkat_pendidikan','nama_sekolah','npsn','status','alamat','latitude','longtitude'];
+    foreach ($headers as $h) echo '<th>' . htmlspecialchars($h) . '</th>';
+    echo "</tr></thead><tbody>";
     foreach ($export_rows as $r) {
-        fputcsv($out, [
-            $r['id_sekolah'] ?? '',
-            $r['id_kecamatan'] ?? '',
-            $r['nama_kecamatan'] ?? '',
-            $r['nama_desa'] ?? '',
-            $r['tingkat_pendidikan'] ?? '',
-            $r['nama_sekolah'] ?? '',
-            $r['npsn'] ?? '',
-            $r['status'] ?? '',
-            $r['alamat'] ?? '',
-            $r['latitude'] ?? '',
-            $r['longtitude'] ?? ''
-        ]);
+        echo '<tr>';
+        foreach ($headers as $h) {
+            $val = $r[$h] ?? '';
+            // Replace CRLF to preserve cell display
+            $val = str_replace("\r\n", " ", $val);
+            $val = str_replace("\n", " ", $val);
+            echo '<td>' . htmlspecialchars($val) . '</td>';
+        }
+        echo '</tr>';
     }
-    fclose($out);
+    echo "</tbody></table></body></html>";
     exit;
 }
 
@@ -355,29 +357,29 @@ if (function_exists('table_exists') && table_exists('desa_new')) {
     // Order and prepare export support
     $kecamatan_order_query_no_limit = $kecamatan_query . ' ORDER BY ' . ($dn_kec_col ? "dn.$dn_kec_col" : "dn.$dn_desa_col") . ' ASC';
 
-    // Export CSV for desa_new if requested
-    if (isset($_GET['export_kecamatan']) && $_GET['export_kecamatan'] === 'csv') {
+    // Export for desa_new (CSV backward compatible) -> produce Excel (.xls) HTML table
+    if (isset($_GET['export_kecamatan']) && in_array($_GET['export_kecamatan'], ['csv','excel'])) {
         $export_rows = fetch_all($kecamatan_order_query_no_limit);
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=kecamatan_export.csv');
-        $out = fopen('php://output', 'w');
-        $headers = [];
-        $headers[] = 'nama_kecamatan';
-        $headers[] = 'nama_desa';
-        $headers[] = ($dn_idwil_col ?? 'id_wilayah');
-        $headers[] = ($dn_lat_col ?? 'latitude');
-        $headers[] = ($dn_long_col ?? 'longtitude');
-        fputcsv($out, $headers);
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename=kecamatan_export.xls');
+        echo "\xEF\xBB\xBF";
+        echo "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /></head><body>";
+        echo "<table border=1><thead><tr style=\"background:#f0f0f0;\">";
+        $headers = ['nama_kecamatan','nama_desa', ($dn_idwil_col ?? 'id_wilayah'), ($dn_lat_col ?? 'latitude'), ($dn_long_col ?? 'longtitude')];
+        foreach ($headers as $h) echo '<th>' . htmlspecialchars($h) . '</th>';
+        echo "</tr></thead><tbody>";
         foreach ($export_rows as $r) {
-            $row = [];
-            $row[] = $r['nama_kecamatan_kec'] ?? ($r[$dn_kec_col] ?? '');
-            $row[] = $r['nama_desa'] ?? ($r[$dn_desa_col] ?? '');
-            $row[] = $r[$dn_idwil_col] ?? ($r['id_wilayah'] ?? ($r['id'] ?? ''));
-            $row[] = $r[$dn_lat_col] ?? ($r['latitude'] ?? '');
-            $row[] = $r[$dn_long_col] ?? ($r['longtitude'] ?? $r['longitude'] ?? '');
-            fputcsv($out, $row);
+            echo '<tr>';
+            $vals = [];
+            $vals[] = $r['nama_kecamatan_kec'] ?? ($r[$dn_kec_col] ?? '');
+            $vals[] = $r['nama_desa'] ?? ($r[$dn_desa_col] ?? '');
+            $vals[] = $r[$dn_idwil_col] ?? ($r['id_wilayah'] ?? ($r['id'] ?? ''));
+            $vals[] = $r[$dn_lat_col] ?? ($r['latitude'] ?? '');
+            $vals[] = $r[$dn_long_col] ?? ($r['longtitude'] ?? $r['longitude'] ?? '');
+            foreach ($vals as $v) echo '<td>' . htmlspecialchars(str_replace(["\r\n","\n"], [' ',' '], $v)) . '</td>';
+            echo '</tr>';
         }
-        fclose($out);
+        echo "</tbody></table></body></html>";
         exit;
     }
 
@@ -1162,7 +1164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
 
             .admin-status-top {
-                display: none;
+                display: flex;
+                top: 70px;
+                right: 16px;
             }
 
             .data-section {
@@ -1286,6 +1290,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         /* Admin Status Top Right */
         .admin-status-top {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -1298,7 +1306,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             flex-shrink: 0;
             min-height: 44px;
             -webkit-tap-highlight-color: transparent;
-            z-index: 50;
         }
 
         .admin-status-top .online-dot {
@@ -2198,7 +2205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <button type="submit" style="padding:11px 12px; background:#2c7be5; color:#fff; border-radius:6px; border:none;">Cari</button>
-                            <a class="export-btn" href="?export_kecamatan=csv<?php echo $kecamatan_search ? '&search_kecamatan=' . urlencode($kecamatan_search) : ''; ?>&per_page_kecamatan=<?php echo ($kecamatan_per_page === 0) ? 'all' : $kecamatan_per_page; ?>" style="padding:8px 12px; background:#4caf50; color:#fff; border-radius:6px; text-decoration:none;">Export CSV</a>
+                            <a class="export-btn" href="?export_kecamatan=excel<?php echo $kecamatan_search ? '&search_kecamatan=' . urlencode($kecamatan_search) : ''; ?>&per_page_kecamatan=<?php echo ($kecamatan_per_page === 0) ? 'all' : $kecamatan_per_page; ?>" style="padding:8px 12px; background:#4caf50; color:#fff; border-radius:6px; text-decoration:none;">Export Excel</a>
                         </div>
                     </form>
                 </div>
@@ -2338,7 +2345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                         </div>
                                 <div style="display:flex; gap:8px; align-items:center;">
                             <button type="submit" style="padding:11px 12px; background:#2c7be5; color:#fff; border-radius:6px; border:none;">Cari</button>
-                            <a class="export-btn" href="?export=csv<?php echo $search ? '&search=' . urlencode($search) : ''; ?>&per_page=<?php echo ($per_page === 0) ? 'all' : $per_page; ?>" style="padding:8px 12px; background:#4caf50; color:#fff; border-radius:6px; text-decoration:none;">Export CSV</a>
+                            <a class="export-btn" href="?export=excel<?php echo $search ? '&search=' . urlencode($search) : ''; ?>&per_page=<?php echo ($per_page === 0) ? 'all' : $per_page; ?>" style="padding:8px 12px; background:#4caf50; color:#fff; border-radius:6px; text-decoration:none;">Export Excel</a>
                         </div>
                     </form>
                 </div>
@@ -3088,19 +3095,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // Scroll detection: hide/show mobile buttons
         let lastScrollTop = 0;
         const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-        const adminStatusTop = document.querySelector('.admin-status-top');
+        const mobileUserIcon = document.querySelector('.mobile-user-icon');
 
         window.addEventListener('scroll', function() {
             const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
             
-            if (currentScroll > lastScrollTop && currentScroll > 60) {
-                // Scrolling DOWN - hide buttons
-                if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
-                if (adminStatusTop) adminStatusTop.classList.add('hidden-on-scroll');
-            } else if (currentScroll < lastScrollTop) {
-                // Scrolling UP - show buttons
+            // Always show when near top
+            if (currentScroll < 60) {
+                if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
                 if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
-                if (adminStatusTop) adminStatusTop.classList.remove('hidden-on-scroll');
+            } else if (currentScroll < lastScrollTop) {
+                // Scrolling UP - hide buttons
+                if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
+                if (mobileUserIcon) mobileUserIcon.classList.add('hidden-on-scroll');
+            } else if (currentScroll > lastScrollTop) {
+                // Scrolling DOWN - show buttons
+                if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
+                if (mobileUserIcon) mobileUserIcon.classList.remove('hidden-on-scroll');
             }
             lastScrollTop = currentScroll <= 0 ? 0 : currentScroll;
         });

@@ -602,7 +602,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             }
 
             .admin-status-top {
-                display: none;
+                display: flex;
+                top: 70px;
+                right: 16px;
             }
 
             .data-section {
@@ -718,6 +720,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         /* Admin Status Top Right */
         .admin-status-top {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -730,7 +736,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             flex-shrink: 0;
             min-height: 44px;
             -webkit-tap-highlight-color: transparent;
-            z-index: 50;
         }
 
         .admin-status-top .online-dot {
@@ -1936,12 +1941,16 @@ if (editFotoInput) {
         window.addEventListener('scroll', function() {
             const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
             
-            if (currentScroll > lastScrollTop && currentScroll > 60) {
-                // Scrolling DOWN - hide buttons
+            // Always show when near top
+            if (currentScroll < 60) {
+                if (adminStatusTop) adminStatusTop.classList.remove('hidden-on-scroll');
+                if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
+            } else if (currentScroll < lastScrollTop) {
+                // Scrolling UP - hide buttons
                 if (mobileMenuToggle) mobileMenuToggle.classList.add('hidden-on-scroll');
                 if (adminStatusTop) adminStatusTop.classList.add('hidden-on-scroll');
-            } else if (currentScroll < lastScrollTop) {
-                // Scrolling UP - show buttons
+            } else if (currentScroll > lastScrollTop) {
+                // Scrolling DOWN - show buttons
                 if (mobileMenuToggle) mobileMenuToggle.classList.remove('hidden-on-scroll');
                 if (adminStatusTop) adminStatusTop.classList.remove('hidden-on-scroll');
             }
